@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>B站随机听歌</title>
+  <style>
+    body {
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f7f7f7;
+      color: #222;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 28px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 16px 0 20px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #1677ff;
+      color: #fff;
+    }
+
+    button:hover {
+      opacity: 0.92;
+    }
+
+    .info {
+      margin: 12px 0 20px;
+      line-height: 1.8;
+      background: #fafafa;
+      padding: 14px;
+      border-radius: 10px;
+    }
+
+    .player-wrap {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%;
+      overflow: hidden;
+      border-radius: 14px;
+      background: #000;
+    }
+
+    iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    ul {
+      padding-left: 20px;
+    }
+
+    .tip {
+      font-size: 14px;
+      color: #666;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>我的随机听歌网站</h1>
+
+    <div class="controls">
+      <button id="randomBtn">随机播放</button>
+      <button id="nextBtn">下一首（随机）</button>
+    </div>
+
+    <div class="info">
+      <div><strong>当前歌曲：</strong><span id="songTitle">还没开始播放</span></div>
+      <div><strong>B站链接：</strong><a id="songLink" href="#" target="_blank">暂无</a></div>
+      <div><strong>BV号：</strong><span id="songBvid">暂无</span></div>
+    </div>
+
+    <div class="player-wrap">
+      <iframe
+        id="biliPlayer"
+        src=""
+        scrolling="no"
+        allowfullscreen="true"
+        referrerpolicy="strict-origin-when-cross-origin">
+      </iframe>
+    </div>
+
+    <p class="tip">
+      提示：部分浏览器会拦截带声音自动播放；若没声音，点一下页面按钮再播放即可。
+    </p>
+
+    <h3>固定歌单</h3>
+    <ul id="playlistView"></ul>
+  </div>
+
+  <script>
+    // 你把自己的B站歌曲链接放这里
+    const playlist = [
+      {
+        title: "歌曲1",
+        url: "https://www.bilibili.com/video/BV1LM4y1s7gC/?spm_id_from=333.337.search-card.all.click&vd_source=7d332be8cbe2896e118e34fa6144d922"
+      },
+      {
+        title: "歌曲2",
+        url: "https://www.bilibili.com/video/BV1LM4y1s7gC/?spm_id_from=333.337.search-card.all.click&vd_source=7d332be8cbe2896e118e34fa6144d922"
+      },
+      {
+        title: "歌曲3",
+        url: "https://www.bilibili.com/video/BV1LM4y1s7gC/?spm_id_from=333.337.search-card.all.click&vd_source=7d332be8cbe2896e118e34fa6144d922"
+      }
+    ];
+
+    const player = document.getElementById("biliPlayer");
+    const songTitleEl = document.getElementById("songTitle");
+    const songLinkEl = document.getElementById("songLink");
+    const songBvidEl = document.getElementById("songBvid");
+    const playlistView = document.getElementById("playlistView");
+    const randomBtn = document.getElementById("randomBtn");
+    const nextBtn = document.getElementById("nextBtn");
+
+    let currentIndex = -1;
+
+    // 从B站链接中提取BV号
+    function extractBvid(url) {
+      const match = url.match(/BV[a-zA-Z0-9]+/);
+      return match ? match[0] : null;
+    }
+
+    // 生成B站官方外链播放器地址
+    function createPlayerUrl(bvid) {
+      const params = new URLSearchParams({
+        bvid,
+        autoplay: "1",
+        muted: "0",
+        danmaku: "0",
+        poster: "1"
+      });
+      return `https://player.bilibili.com/player.html?${params.toString()}`;
+    }
+
+    function renderPlaylist() {
+      playlistView.innerHTML = "";
+      playlist.forEach((song, index) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<a href="${song.url}" target="_blank">${song.title}</a>`;
+        if (index === currentIndex) {
+          li.style.fontWeight = "bold";
+        }
+        playlistView.appendChild(li);
+      });
+    }
+
+    function playSong(index) {
+      const song = playlist[index];
+      const bvid = extractBvid(song.url);
+
+      if (!bvid) {
+        alert("这个链接没有识别出 BV 号，请检查链接格式。");
+        return;
+      }
+
+      currentIndex = index;
+      player.src = createPlayerUrl(bvid);
+
+      songTitleEl.textContent = song.title;
+      songLinkEl.textContent = song.url;
+      songLinkEl.href = song.url;
+      songBvidEl.textContent = bvid;
+
+      renderPlaylist();
+    }
+
+    function randomPlay() {
+      if (playlist.length === 0) return;
+
+      let nextIndex;
+      if (playlist.length === 1) {
+        nextIndex = 0;
+      } else {
+        do {
+          nextIndex = Math.floor(Math.random() * playlist.length);
+        } while (nextIndex === currentIndex);
+      }
+
+      playSong(nextIndex);
+    }
+
+    randomBtn.addEventListener("click", randomPlay);
+    nextBtn.addEventListener("click", randomPlay);
+
+    // 初始渲染歌单
+    renderPlaylist();
+  </script>
+</body>
+</html>
